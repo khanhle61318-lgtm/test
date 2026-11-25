@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mô phỏng các đẳng quá trình</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1c2430;--mut:#667085;--line:#d9dee7;--acc:#2563eb;--hot:#ef4444;--cold:#3b82f6;--ok:#16a34a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141b;--card:#18202b;--tx:#e6ebf2;--mut:#93a0b4;--line:#2b3646;--acc:#60a5fa;--hot:#f87171;--cold:#60a5fa;--ok:#4ade80}}
+:root[data-theme="dark"]{--bg:#0f141b;--card:#18202b;--tx:#e6ebf2;--mut:#93a0b4;--line:#2b3646;--acc:#60a5fa;--hot:#f87171;--cold:#60a5fa;--ok:#4ade80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:4px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1.25fr;gap:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card h2{font-size:.95rem;margin:0 0 8px;color:var(--mut);font-weight:600}
+canvas{width:100%;display:block;border-radius:8px}
+#cyl{height:320px}#pv{height:320px}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;margin-top:14px}
+.row label{display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:2px}
+.row b{color:var(--acc);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--acc)}
+select,button{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--tx);width:100%}
+button{cursor:pointer;background:var(--acc);color:#fff;border:0;font-weight:600}
+button.sec{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+.btns{display:flex;gap:8px;align-items:end}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:14px}
+.out div{background:var(--bg);border-radius:8px;padding:8px 10px}
+.out span{display:block;font-size:.75rem;color:var(--mut)}
+.out strong{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.law{margin-top:12px;padding:10px 12px;border-left:3px solid var(--acc);background:var(--bg);border-radius:6px;font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Mô phỏng các đẳng quá trình</h1>
+<p class="sub">Khí lý tưởng trong xilanh có pít-tông: PV = nRT. Chỉnh thông số rồi kéo thanh “Tiến trình” hoặc bấm Chạy.</p>
+<div class="grid">
+ <div class="card"><h2>Xilanh &amp; phân tử khí</h2><canvas id="cyl"></canvas></div>
+ <div class="card"><h2>Đồ thị P–V</h2><canvas id="pv"></canvas></div>
+</div>
+<div class="card" style="margin-top:14px">
+ <div class="ctrl">
+  <div class="row"><label>Quá trình</label>
+   <select id="proc">
+    <option value="T">Đẳng nhiệt (T không đổi)</option>
+    <option value="P">Đẳng áp (P không đổi)</option>
+    <option value="V">Đẳng tích (V không đổi)</option>
+    <option value="A">Đoạn nhiệt (Q = 0)</option>
+   </select></div>
+  <div class="row"><label>Số mol n <b id="vn"></b></label><input id="n" type="range" min="0.2" max="5" step="0.1" value="1"></div>
+  <div class="row"><label>Nhiệt độ đầu T₁ <b id="vT1"></b></label><input id="T1" type="range" min="100" max="800" step="10" value="300"></div>
+  <div class="row"><label>Thể tích đầu V₁ <b id="vV1"></b></label><input id="V1" type="range" min="1" max="10" step="0.1" value="4"></div>
+  <div class="row"><label><span id="tlab">Thể tích cuối V₂</span> <b id="vt"></b></label><input id="tg" type="range" min="1" max="12" step="0.1" value="9"></div>
+  <div class="row" id="grow"><label>Loại khí (γ)</label>
+   <select id="gam"><option value="1.67">Đơn nguyên tử, γ = 1,67</option><option value="1.4" selected>Lưỡng nguyên tử, γ = 1,40</option><option value="1.33">Đa nguyên tử, γ = 1,33</option></select></div>
+  <div class="row"><label>Tiến trình <b id="vs"></b></label><input id="s" type="range" min="0" max="1" step="0.005" value="0"></div>
+  <div class="row"><label>Tốc độ chạy <b id="vr"></b></label><input id="rate" type="range" min="0.05" max="0.6" step="0.05" value="0.2"></div>
+  <div class="btns"><button id="play">▶ Chạy</button><button class="sec" id="reset">Đặt lại</button></div>
+ </div>
+ <div class="out">
+  <div><span>Áp suất P</span><strong id="oP"></strong></div>
+  <div><span>Thể tích V</span><strong id="oV"></strong></div>
+  <div><span>Nhiệt độ T</span><strong id="oT"></strong></div>
+  <div><span>Công khí sinh A</span><strong id="oW"></strong></div>
+  <div><span>Nhiệt nhận Q</span><strong id="oQ"></strong></div>
+  <div><span>Biến thiên ΔU</span><strong id="oU"></strong></div>
+ </div>
+ <div class="law" id="law"></div>
+</div>
+</div>
+<script>
+const R=8.314, VMAX=12;
+const $=id=>document.getElementById(id);
+const cyl=$('cyl'), pv=$('pv'), cx=cyl.getContext('2d'), px=pv.getContext('2d');
+const fmt=(x,d=2)=>x.toFixed(d).replace('.',',');
+let playing=false, dir=1;
+
+function params(){return{proc:$('proc').value,n:+$('n').value,T1:+$('T1').value,V1:+$('V1').value,tg:+$('tg').value,g:+$('gam').value,s:+$('s').value}}
+
+function state(p,s){
+  const{proc,n,T1,V1,tg,g}=p; let V=V1,T=T1;
+  if(proc==='V'){T=T1+(tg-T1)*s}
+  else{V=V1+(tg-V1)*s;
+    if(proc==='T')T=T1;
+    else if(proc==='P')T=T1*V/V1;
+    else T=T1*Math.pow(V1/V,g-1);}
+  const P=n*R*T/V, Cv=R/(g-1), dU=n*Cv*(T-T1);
+  let W;
+  if(proc==='T')W=n*R*T1*Math.log(V/V1);
+  else if(proc==='P')W=(n*R*T1/V1)*(V-V1);
+  else if(proc==='V')W=0; else W=-dU;
+  return{V,T,P,W,dU,Q:dU+W};
+}
+
+function setTargetUI(){
+  const proc=$('proc').value, tg=$('tg');
+  if(proc==='V'){$('tlab').textContent='Nhiệt độ cuối T₂';tg.min=100;tg.max=900;tg.step=10;if(+tg.value<100||+tg.value>900||tg.dataset.m!=='T'){tg.value=600}tg.dataset.m='T'}
+  else{$('tlab').textContent='Thể tích cuối V₂';tg.min=1;tg.max=12;tg.step=0.1;if(tg.dataset.m!=='V'){tg.value=proc==='A'?8:9}tg.dataset.m='V'}
+  $('grow').style.display=proc==='A'?'':'none';
+}
+
+const LAWS={T:'Định luật Boyle–Mariotte: T = const ⇒ P·V = const. Nén khí (V giảm) thì P tăng; ΔU = 0 nên Q = A.',
+P:'Định luật Gay-Lussac: P = const ⇒ V/T = const. Nhiệt độ tăng thì khí nở ra, công A = P·ΔV.',
+V:'Định luật Charles: V = const ⇒ P/T = const. Khí không sinh công (A = 0), toàn bộ nhiệt làm đổi nội năng: Q = ΔU.',
+A:'Đoạn nhiệt: Q = 0 ⇒ P·Vᵞ = const, T·Vᵞ⁻¹ = const. Khí sinh công thì nội năng giảm: A = −ΔU.'};
+
+function readout(p,st){
+  $('vn').textContent=fmt(p.n,1)+' mol';$('vT1').textContent=p.T1+' K';$('vV1').textContent=fmt(p.V1,1)+' L';
+  $('vt').textContent=p.proc==='V'?p.tg+' K':fmt(p.tg,1)+' L';
+  $('vs').textContent=Math.round(p.s*100)+'%';$('vr').textContent=fmt(+$('rate').value,2);
+  $('oP').textContent=fmt(st.P,1)+' kPa';$('oV').textContent=fmt(st.V,2)+' L';$('oT').textContent=fmt(st.T,0)+' K';
+  $('oW').textContent=fmt(st.W,0)+' J';$('oQ').textContent=fmt(st.Q,0)+' J';$('oU').textContent=fmt(st.dU,0)+' J';
+  $('law').textContent=LAWS[p.proc];
+}
+
+/* particles */
+const parts=[];
+function syncParticles(n){const want=Math.round(n*18);
+  while(parts.length<want){const a=Math.random()*6.283;parts.push({x:Math.random(),y:Math.random(),ux:Math.cos(a),uy:Math.sin(a)})}
+  parts.length=want;}
+
+function size(c){const d=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+  if(c.width!==Math.round(w*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}
+  const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return[w,h]}
+
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function mix(a,b,t){return`rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`}
+const colT=T=>mix([59,130,246],[239,68,68],Math.min(1,Math.max(0,(T-100)/800)));
+
+function drawCyl(p,st,dt){
+  const[w,h]=size(cyl);cx.clearRect(0,0,w,h);
+  const line=css('--mut'),tx=css('--tx');
+  const bx=w*0.22,bw=w*0.56,base=h-24,top0=28,full=base-top0;
+  const bh=full*st.V/VMAX, py=base-bh;
+  syncParticles(p.n);
+  const sp=0.9*Math.sqrt(st.T)*dt/ (bw/260);
+  const k=Math.sqrt(st.T)*1.1; // px/s
+  for(const q of parts){
+    q.x+=q.ux*k*dt/bw; q.y+=q.uy*k*dt/Math.max(bh,1);
+    if(q.x<0){q.x=-q.x;q.ux=Math.abs(q.ux)}if(q.x>1){q.x=2-q.x;q.ux=-Math.abs(q.ux)}
+    if(q.y<0){q.y=-q.y;q.uy=Math.abs(q.uy)}if(q.y>1){q.y=2-q.y;q.uy=-Math.abs(q.uy)}
+  }
+  // gas background
+  cx.fillStyle=colT(st.T);cx.globalAlpha=.12;cx.fillRect(bx,py,bw,bh);cx.globalAlpha=1;
+  // particles
+  cx.fillStyle=colT(st.T);
+  for(const q of parts){cx.beginPath();cx.arc(bx+q.x*bw,base-q.y*bh,3.4,0,6.283);cx.fill()}
+  // walls
+  cx.strokeStyle=tx;cx.lineWidth=3;cx.beginPath();cx.moveTo(bx,top0-10);cx.lineTo(bx,base);cx.lineTo(bx+bw,base);cx.lineTo(bx+bw,top0-10);cx.stroke();
+  // piston + rod
+  cx.fillStyle=line;cx.fillRect(bx,py-8,bw,8);
+  cx.fillRect(bx+bw/2-4,6,8,py-14);cx.fillRect(bx+bw/2-22,2,44,6);
+  // weight arrows ~ pressure
+  const L=Math.min(46,st.P/Math.max(1,pvMaxP)*46+8);
+  cx.strokeStyle=css('--hot');cx.fillStyle=css('--hot');cx.lineWidth=2;
+  for(const f of[.2,.8]){const ax=bx+bw*f;cx.beginPath();cx.moveTo(ax,py-12-L);cx.lineTo(ax,py-12);cx.stroke();
+    cx.beginPath();cx.moveTo(ax-5,py-18);cx.lineTo(ax+5,py-18);cx.lineTo(ax,py-11);cx.fill()}
+  // heater
+  cx.fillStyle=st.Q>1?css('--hot'):st.Q<-1?css('--cold'):css('--line');
+  cx.fillRect(bx-4,base+8,bw+8,8);
+  cx.fillStyle=tx;cx.font='12px system-ui';cx.textAlign='left';
+  cx.fillText(p.proc==='A'?'Cách nhiệt':(st.Q>1?'Đang nhận nhiệt':st.Q<-1?'Đang tỏa nhiệt':'Không trao đổi nhiệt'),bx,h-1);
+  cx.textAlign='right';cx.fillText('V = '+fmt(st.V,1)+' L',w-6,py-2<14?14:py+0);
+}
+
+let pvMaxP=100;
+function drawPV(p,st){
+  const[w,h]=size(pv);px.clearRect(0,0,w,h);
+  const mL=48,mB=34,mT=14,mR=14,gw=w-mL-mR,gh=h-mT-mB;
+  const pts=[];for(let i=0;i<=80;i++){const q=state(p,i/80);pts.push(q)}
+  let pm=0;for(const q of pts)pm=Math.max(pm,q.P);pvMaxP=pm*1.2;
+  const X=v=>mL+v/VMAX*gw, Y=P=>mT+gh-P/pvMaxP*gh;
+  const mut=css('--mut'),line=css('--line'),tx=css('--tx'),acc=css('--acc');
+  px.font='11px system-ui';px.fillStyle=mut;px.strokeStyle=line;px.lineWidth=1;
+  for(let i=0;i<=4;i++){const P=pvMaxP*i/4,y=Y(P);px.beginPath();px.moveTo(mL,y);px.lineTo(mL+gw,y);px.stroke();px.textAlign='right';px.fillText(P.toFixed(0),mL-5,y+4)}
+  for(let v=0;v<=VMAX;v+=2){const x=X(v);px.beginPath();px.moveTo(x,mT);px.lineTo(x,mT+gh);px.stroke();px.textAlign='center';px.fillText(v,x,mT+gh+14)}
+  px.fillStyle=tx;px.textAlign='center';px.fillText('V (lít)',mL+gw/2,h-3);
+  px.save();px.translate(11,mT+gh/2);px.rotate(-Math.PI/2);px.fillText('P (kPa)',0,0);px.restore();
+  // isotherm through current state
+  px.setLineDash([4,4]);px.strokeStyle=mut;px.beginPath();
+  let first=true;for(let v=0.4;v<=VMAX;v+=0.1){const P=st.P*st.V/v;if(P>pvMaxP*1.05){continue}const x=X(v),y=Y(P);first?px.moveTo(x,y):px.lineTo(x,y);first=false}
+  px.stroke();px.setLineDash([]);
+  // work area up to current
+  const n=Math.max(1,Math.round(p.s*80));
+  px.fillStyle=acc;px.globalAlpha=.18;px.beginPath();px.moveTo(X(pts[0].V),Y(0));
+  for(let i=0;i<=n;i++){const q=state(p,p.s*i/n);px.lineTo(X(q.V),Y(q.P))}
+  px.lineTo(X(st.V),Y(0));px.closePath();px.fill();px.globalAlpha=1;
+  // full path
+  px.strokeStyle=acc;px.lineWidth=2.5;px.beginPath();pts.forEach((q,i)=>i?px.lineTo(X(q.V),Y(q.P)):px.moveTo(X(q.V),Y(q.P)));px.stroke();
+  // start, end, current
+  const dot=(q,c,r,l)=>{px.fillStyle=c;px.beginPath();px.arc(X(q.V),Y(q.P),r,0,6.283);px.fill();if(l){px.fillStyle=tx;px.textAlign='left';px.fillText(l,X(q.V)+8,Y(q.P)-6)}};
+  dot(pts[0],mut,4,'1');dot(pts[80],mut,4,'2');dot(st,css('--hot'),6);
+}
+
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing){let s=+$('s').value+dir*dt*+$('rate').value;
+    if(s>=1){s=1;dir=-1}if(s<=0){s=0;dir=1}$('s').value=s}
+  const p=params(),st=state(p,p.s);
+  readout(p,st);drawPV(p,st);drawCyl(p,st,dt);
+  requestAnimationFrame(frame);
+}
+
+$('proc').addEventListener('change',()=>{setTargetUI();$('s').value=0});
+for(const id of['n','T1','V1','tg','gam'])$(id).addEventListener('input',()=>{if(id!=='n')$('s').value=$('s').value});
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'⏸ Dừng':'▶ Chạy'});
+$('reset').addEventListener('click',()=>{playing=false;dir=1;$('play').textContent='▶ Chạy';$('s').value=0});
+$('s').addEventListener('input',()=>{playing=false;$('play').textContent='▶ Chạy'});
+setTargetUI();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
